@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article and this repository."
+title: "nkmigration: 3D NK-cell migration analysis"
+version: 1.0.0
+doi: "[Zenodo DOI]"
+repository-code: "https://github.com/cdzahm/krasi-nk-pdac-migration"
+license: "[License]"
+authors:
+  - family-names: "[Family name]"
+    given-names: "[Given name]"
+    affiliation: "University of Minnesota"
+preferred-citation:
+  type: article
+  title: "Inhibition of the KRAS oncoprotein sensitizes pancreatic cancer to NK cell immunotherapy"
+  journal: "Cancer Cell"
+  year: 2026
+  doi: "[Article DOI]"
+  authors:
+    - family-names: "[Family name]"
+      given-names: "[Given name]"
