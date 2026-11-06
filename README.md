@@ -3,7 +3,7 @@
 Code for the 3D NK-cell migration and morphology analysis in
 
 > Dodhiawala PB, Zahm CD, et al. Inhibition of the KRAS oncoprotein sensitizes
-> pancreatic cancer to NK cell immunotherapy. *Cancer Cell* (2026). [DOI]
+> pancreatic cancer to NK cell immunotherapy. *Cancer Cell* (submitted).
 
 It takes time-lapse multiphoton stacks of NK cells migrating in collagen
 with pancreatic tumor cells, and produces the per-cell measures, statistics
@@ -201,8 +201,9 @@ definitions and the inclusion rules.
 
 ## Citation
 
-If you use this code, please cite the paper above and this repository
-([Zenodo DOI]). See [`CITATION.cff`](CITATION.cff).
+If you use this code, please cite the paper above and this repository. The
+citation, with DOIs for the paper and for an archived release of this code,
+will be updated on publication. See [`CITATION.cff`](CITATION.cff).
 
 ## License
 
