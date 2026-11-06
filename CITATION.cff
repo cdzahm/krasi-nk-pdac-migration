@@ -4,7 +4,7 @@ title: "nkmigration: 3D NK-cell migration analysis"
 version: 1.0.0
 doi: "[Zenodo DOI]"
 repository-code: "https://github.com/cdzahm/krasi-nk-pdac-migration"
-license: "[License]"
+license: GPL-3.0-only
 authors:
   - family-names: "[Family name]"
     given-names: "[Given name]"
