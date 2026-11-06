@@ -7,7 +7,7 @@ name = "nkmigration"
 version = "1.0.0"
 description = "3D NK-cell migration analysis for time-lapse multiphoton imaging"
 readme = "README.md"
-license = "GPL-3.0-only"
+license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
