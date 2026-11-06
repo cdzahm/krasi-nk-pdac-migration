@@ -5,8 +5,8 @@ version: 1.0.0
 repository-code: "https://github.com/cdzahm/krasi-nk-pdac-migration"
 license: GPL-3.0-or-later
 authors:
-  - family-names: "[Family name]"
-    given-names: "[Given name]"
+  - family-names: "Zahm"
+    given-names: "Christopher D."
     affiliation: "University of Minnesota"
 preferred-citation:
   type: article
