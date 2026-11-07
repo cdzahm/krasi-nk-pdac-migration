@@ -5,9 +5,9 @@ Code for the 3D NK-cell migration and morphology analysis in
 > Dodhiawala PB, Zahm CD, et al. Inhibition of the KRAS oncoprotein sensitizes
 > pancreatic cancer to NK cell immunotherapy. *Cancer Cell* (submitted).
 
-It takes time-lapse multiphoton stacks of NK cells migrating in collagen
-with pancreatic tumor cells, and produces the per-cell measures, statistics
-and panels in Figures 3, 4, S3 and S5.
+It takes time-lapse multiphoton stacks of NK cells migrating in collagen,
+with or without pancreatic tumor cells, and produces the per-cell measures,
+statistics and panels in Figures 3, 4, S3 and S5.
 
 ## Panels
 
@@ -20,7 +20,7 @@ and panels in Figures 3, 4, S3 and S5.
 | 4G (left) | Motility coefficient | MIA-PaCa-2, IL-15 vs TriKE | `Fig4G_motility` |
 | 4H | Motility coefficient | HPAF-II, IL-15 / TriKE / TriKE+KRASi | `Fig4H_motility` |
 | 4J | Elongated-fast occupancy | HPAF-II, IL-15 / TriKE / TriKE+KRASi | `Fig4J_elongated_fast` |
-| S3B | Motility coefficient, speed | IL-15 titration (0, 1, 10 ng) | `FigS3B_*` |
+| S3B | Motility coefficient, speed | IL-15 titration (0, 1 and 10 ng/mL), NK cells alone | `FigS3B_*` |
 | S3C | Arrest, elongated-fast, round-slow, cell area | IL-15 titration | `FigS3C_*` |
 | S3D | Motility coefficient | MIA-PaCa-2, no IL-15 vs IL-15 | `FigS3D_motility` |
 | S3E | Arrest, elongated-fast, round-slow, cell area | MIA-PaCa-2, no IL-15 vs IL-15 | `FigS3E_*` |
@@ -43,12 +43,21 @@ conda activate nkmigration
 or with pip, into an existing Python 3.11 environment:
 
 ```bash
-pip install -e ".[segmentation,test]"
+pip install -e ".[test]"
 ```
 
-Versions are pinned to the ones used for the paper. Segmentation (step 2)
-needs Cellpose and PyTorch, and a GPU is strongly recommended; every other
-step runs on a laptop.
+That covers every step except segmentation (step 2), which also needs
+Cellpose and PyTorch, and a GPU is strongly recommended:
+
+```bash
+pip install -e ".[segmentation]"
+```
+
+PyTorch 2.5.1 has no build for Intel Macs, so step 2 needs Linux, Windows or
+an Apple Silicon Mac. Every other step runs on any of them, including a
+laptop. Direct dependencies are pinned to the versions used for the paper,
+and `requirements-lock.txt` pins every package for the steps other than
+segmentation (Python 3.11.15, tested on Linux).
 
 ## Data
 
@@ -83,7 +92,7 @@ line.
 | `stimulus`, `il15_ng`, `kras_inhibitor` | Treatment arm. |
 | `drop_first_frames` | Frames removed from the start before analysis. |
 | `segment_first_z_planes` | Segment only the bottom planes. Used for the four MIA-PaCa-2 donor B recordings: in one of them the upper planes are nearly identical to one another, consistent with the Z drive sticking, so all four were cropped to the same depth. |
-| `drift_method` | `reference_frame`, `windowed` (+/-3 frames), `windowed_z` (Z only, +/-3 frames) or `none`. |
+| `drift_method` | `reference_frame`, `windowed` (+/-3 frames), `windowed_z` (Z only, +/-3 frames) or `none`, used once, for a recording in no panel that no method registered reliably. |
 | `drift_channel` | Registration input: `collagen`, `collagen_enhanced` (background-subtracted, CLAHE) or `tumor_minus_nk` (tumor channel with NK signal masked). |
 
 Some recordings appear in no panel, such as MIA-PaCa-2 donor A with no IL-15
@@ -132,8 +141,9 @@ test.
 ## Methods in brief
 
 **Drift.** A rigid translation per frame, from phase cross-correlation
-(10x subpixel) on isotropically resampled volumes. Shifts are applied to the
-NK and tumor channels by linear interpolation.
+(10x subpixel) on isotropically resampled volumes; the Z-only method
+cross-correlates per-plane mean intensity profiles instead. Shifts are applied
+to the NK and tumor channels by linear interpolation.
 
 **Segmentation.** Cellpose-SAM (built-in `cpsam_v2` weights, flow threshold
 0.4, minimum size 5 px) on maximum-intensity projections of overlapping
@@ -141,7 +151,9 @@ NK and tumor channels by linear interpolation.
 when their masks overlap with IoU >= 0.3 (one-to-one, highest IoU first), and
 the object with the largest area x mean intensity is kept. Each cell's Z
 position is the intensity-weighted centroid of the NK signal under its 2D
-mask, through the full stack depth. Cells touching the XY border are tracked
+mask, through the full stack depth and without background subtraction, as in
+the published analysis; for the MIA-PaCa-2 donor B recordings that includes
+the planes above the segmented ones. Cells touching the XY border are tracked
 but left out of shape measures.
 
 **Tracking.** LapTrack linear assignment on (x, y, z), at most 15 um per
@@ -152,12 +164,16 @@ between consecutive frames and need at least 3 frames; shape measures need at
 least 3 frames off the border.
 
 - Speed: median step length per minute.
-- Arrest coefficient: fraction of steps shorter than one pixel.
+- Arrest coefficient: fraction of steps shorter than one pixel (1.10 to 1.83 um,
+  depending on the recording).
 - Cell area: median 2D mask area.
 - Motility coefficient: a persistent random walk model fit per axis
-  ([`prwm.py`](src/nkmigration/prwm.py)), mu = S^2 P summed over x, y and z,
-  with P bounded by the track's duration. Lags need at least 4 displacement
-  pairs and fits at least 4 lags, so fitted tracks have 7 or more frames.
+  ([`prwm.py`](src/nkmigration/prwm.py)), mu = S^2 P summed over x, y and z
+  (3 x M, where M = MSD/6t), with P bounded by the track's duration. Lags need
+  at least 4 displacement pairs and fits at least 4 lags, counting tau = 0, so
+  fitted tracks have 7 or more frames. Tracks with a frame missing its Z
+  position are not fit, and fits with mu = 0 are dropped. Most fits put S or P
+  of at least one axis at a bound, so only mu is interpreted.
 - Morphodynamic states: each cell-timepoint is round or elongated and slow or
   fast, splitting aspect ratio and step length at their medians within an
   experiment. Occupancy is the fraction of a cell's classified frames in a
@@ -168,7 +184,8 @@ every arm in a comparison. Two groups: two-sided Mann-Whitney U. Three
 groups: Kruskal-Wallis, then Dunn's test with Holm correction, with pairs
 shown as not significant unless the Kruskal-Wallis p < 0.05. Motility
 coefficients above 300 um^2/min are drawn at 300 and kept in every
-statistic.
+statistic; the violin shows the values up to 300, and `panel_stats.csv` lists
+how many cells are above it.
 
 ## How the measures were chosen
 
@@ -196,8 +213,9 @@ pytest
 ```
 
 The tests use synthetic data: known shifts recovered by each drift method, a
-persistent random walk recovered by the PRWM fit, slab merging, the state
-definitions and the inclusion rules.
+persistent random walk recovered by the PRWM fit, slab merging, calibration
+read and write, the orientation convention, the state definitions and the
+inclusion rules.
 
 ## Citation
 

@@ -10,11 +10,15 @@ import numpy as np
 import pandas as pd
 
 ACF_LAGS = range(1, 11)
+MAX_ASPECT_RATIO = 100.0  # a degenerate ellipse fit can give ~1e7
 
 
 def _axis_motion_angle(orient: np.ndarray, dy: np.ndarray, dx: np.ndarray) -> np.ndarray:
-    """Angle between the long axis (mod 180) and the step direction, in [0, 90] deg."""
-    d = np.degrees(np.abs(np.arctan2(dy, dx) - orient)) % 180.0
+    """Angle between the long axis (mod 180) and the step direction, in [0, 90] deg.
+
+    regionprops measures orientation from the row axis; steps are measured from x.
+    """
+    d = np.degrees(np.abs(np.arctan2(dy, dx) - (np.pi / 2 - orient))) % 180.0
     return np.where(d > 90.0, 180.0 - d, d)
 
 
@@ -30,14 +34,14 @@ def track_measures(g: pd.DataFrame, pixel_um: float, frame_min: float) -> dict:
     out = {"n_frames": len(g), "n_shape_frames": int(shape_ok.sum())}
 
     ar = g.loc[shape_ok, "aspect_ratio"].to_numpy(float)
+    ar = ar[ar < MAX_ASPECT_RATIO]
     out["aspect_ratio_median"] = _median(ar)
     out["aspect_ratio_var"] = float(np.var(ar, ddof=1)) if len(ar) > 1 else np.nan
     for col in ("eccentricity", "area_um2", "equivalent_diameter_um", "solidity", "circularity"):
         out[f"{col}_median"] = _median(g.loc[shape_ok, col].to_numpy(float))
     out["elongation_mean"] = float(np.mean(ar)) if len(ar) else np.nan
-    ar_fit = ar[ar < 100]  # a degenerate ellipse fit can give ~1e7
-    out["elongation_cv"] =(float(np.std(ar_fit, ddof=1) / np.mean(ar_fit))
-                            if len(ar_fit) >= 2 and np.mean(ar_fit) > 0 else np.nan)
+    out["elongation_cv"] = (float(np.std(ar, ddof=1) / np.mean(ar))
+                            if len(ar) >= 2 and np.mean(ar) > 0 else np.nan)
 
     dy, dx = np.diff(y), np.diff(x)
     single = np.diff(t) == 1

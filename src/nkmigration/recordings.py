@@ -32,7 +32,7 @@ class Recording:
     def arm(self) -> str:
         """Treatment arm label used in panels, e.g. 'TriKE+KRASi'."""
         if self.experiment.startswith("Titration"):
-            return f"{self.il15_ng:g} ng"
+            return f"{self.il15_ng:g} ng/mL"
         base = {"none": "no IL-15", "IL15": "IL-15", "TriKE": "TriKE"}[self.stimulus]
         if not self.kras_inhibitor:
             return base

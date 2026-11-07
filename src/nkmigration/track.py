@@ -21,15 +21,14 @@ def link(detections: pd.DataFrame) -> pd.DataFrame:
     """
     df = detections.copy()
     df["z_link"] = df["z_um"].fillna(df["slab_center_z_um"])
-    df["t_coord"] = df["t"]
     lt = LapTrack(metric=_sq_dist, cutoff=MAX_DISPLACEMENT_UM ** 2,
                   gap_closing_metric="sqeuclidean", gap_closing_cutoff=False,
                   gap_closing_max_frame_count=0,
                   splitting_cutoff=False, merging_cutoff=False)
     tracked, splits, merges = lt.predict_dataframe(
-        df, coordinate_cols=["y_um", "x_um", "z_link", "t_coord"], frame_col="t")
+        df, coordinate_cols=["y_um", "x_um", "z_link"], frame_col="t")
     if not (splits.empty and merges.empty):
         raise RuntimeError("splitting and merging must be off")
-    tracked = tracked.drop(columns=["z_link", "t_coord"])
+    tracked = tracked.drop(columns=["z_link"])
     keep = [c for c in tracked.columns if c not in ("frame", "index", "tree_id")]
     return tracked[keep].sort_values(["track_id", "t"]).reset_index(drop=True)

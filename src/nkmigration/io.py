@@ -8,6 +8,8 @@ from pathlib import Path
 import numpy as np
 import tifffile
 
+MICRON = {"um", "µm", "μm", "\\u00B5m", "micron", "microns"}
+
 
 @dataclass(frozen=True)
 class Calibration:
@@ -40,6 +42,9 @@ def read_calibration(path: str | Path) -> Calibration:
         page = tf.pages[0]
         desc = page.tags["ImageDescription"].value
         fields = dict(line.split("=", 1) for line in desc.splitlines() if "=" in line)
+        if fields.get("unit", "").strip() not in MICRON:
+            raise ValueError(f"{path}: calibration unit {fields.get('unit')!r}, expected um "
+                             "(see scripts/00_add_calibration.py)")
         x_res = page.tags["XResolution"].value
         y_res = page.tags["YResolution"].value
     px_x = 1.0 / (x_res[0] / x_res[1])
@@ -60,7 +65,7 @@ def save_stack(path: str | Path, data: np.ndarray, cal: Calibration) -> None:
     """Write a TZYX stack with its calibration as ImageJ metadata."""
     vz, vy, vx = cal.voxel_um
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    tifffile.imwrite(path, data, imagej=True, resolution=(1.0 / vy, 1.0 / vx),
+    tifffile.imwrite(path, data, imagej=True, resolution=(1.0 / vx, 1.0 / vy),
                      metadata={"axes": "TZYX", "unit": "um", "spacing": vz,
                                "finterval": cal.frame_interval_s})
 

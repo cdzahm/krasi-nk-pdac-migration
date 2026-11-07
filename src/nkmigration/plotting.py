@@ -1,5 +1,5 @@
-"""Dot-plot panels: a violin of the full distribution, up to 300 sampled
-cells as points, and the median with interquartile range."""
+"""Dot-plot panels: a violin of the distribution, up to 300 sampled cells as
+points, and the median with interquartile range."""
 from __future__ import annotations
 
 import zlib
@@ -38,8 +38,9 @@ def dot_panel(groups: list[str], values: list[np.ndarray], ylabel: str, title: s
               connect_medians: bool = False):
     """Draw one panel and return (figure, statistics).
 
-    With `ceiling`, values above it are drawn at the ceiling, never dropped,
-    and the medians and tests still use the full data.
+    With `ceiling`, values above it are drawn as points at the ceiling and
+    never dropped. The violin shows the values up to the ceiling, and the
+    medians and tests use the full data.
     """
     rng = _rng(key)
     n_pairs = len(groups) * (len(groups) - 1) // 2

@@ -48,11 +48,13 @@ def fit_axis(pos: np.ndarray, frame_min: float) -> dict | None:
 
 
 def fit_tracks(tracks: pd.DataFrame, frame_min: float) -> pd.DataFrame:
-    """One row per track fitted on all three axes. Detections without a Z
-    position are left out of the fit."""
+    """One row per track fitted on all three axes. A track with a frame that
+    has no Z position is not fit, since the lags would no longer be in frames."""
     rows = []
-    df = tracks.dropna(subset=["z_um"]).sort_values(["track_id", "t"])
+    df = tracks.sort_values(["track_id", "t"])
     for tid, g in df.groupby("track_id"):
+        if g["z_um"].isna().any() or (np.diff(g["t"].to_numpy()) != 1).any():
+            continue
         fits = {ax: fit_axis(g[col].to_numpy(float), frame_min)
                 for ax, col in (("x", "x_um"), ("y", "y_um"), ("z", "z_um"))}
         if any(f is None for f in fits.values()):

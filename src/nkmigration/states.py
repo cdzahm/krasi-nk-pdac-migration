@@ -10,6 +10,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from .features import MAX_ASPECT_RATIO
+
 STATES = {0: "round_slow", 1: "round_fast", 2: "elongated_slow", 3: "elongated_fast"}
 MIN_OCCUPANCY_FRAMES = 10
 
@@ -25,7 +27,8 @@ def frame_speeds(tracks: pd.DataFrame) -> pd.DataFrame:
 
 def state_cutoffs(frames: pd.DataFrame) -> pd.DataFrame:
     """Median aspect ratio and step length per experiment."""
-    ok = frames["use_for_shape"] & frames["step_um"].notna() & (frames["aspect_ratio"] < 100)
+    ok = (frames["use_for_shape"] & frames["step_um"].notna()
+          & (frames["aspect_ratio"] < MAX_ASPECT_RATIO))
     return (frames.loc[ok].groupby("experiment")
             .agg(aspect_ratio_cut=("aspect_ratio", "median"),
                  step_cut_um=("step_um", "median")).reset_index())
@@ -33,7 +36,8 @@ def state_cutoffs(frames: pd.DataFrame) -> pd.DataFrame:
 
 def assign_states(frames: pd.DataFrame, cuts: pd.DataFrame) -> pd.DataFrame:
     df = frames.merge(cuts, on="experiment", how="left")
-    ok = df["use_for_shape"] & df["step_um"].notna() & df["aspect_ratio_cut"].notna()
+    ok = (df["use_for_shape"] & df["step_um"].notna() & df["aspect_ratio_cut"].notna()
+          & (df["aspect_ratio"] < MAX_ASPECT_RATIO))
     df["state"] = np.nan
     df.loc[ok, "state"] = (2 * (df.loc[ok, "aspect_ratio"] >= df.loc[ok, "aspect_ratio_cut"])
                            + (df.loc[ok, "step_um"] >= df.loc[ok, "step_cut_um"]))
@@ -57,15 +61,21 @@ def episodes(states: pd.DataFrame) -> pd.DataFrame:
 
 
 def per_cell_states(ep: pd.DataFrame) -> pd.DataFrame:
-    """Occupancy of each state and the state-transition measures, per track."""
+    """Occupancy of each state and the state-transition measures, per track.
+
+    A transition is a change of state between two consecutive classified
+    frames; a run broken by an unclassified frame is not a transition.
+    """
     key = ["recording_id", "track_id"]
+    ep = ep.sort_values(key + ["t_start"])
+    prev = ep.groupby(key)[["t_start", "duration"]].shift(1)
+    ep = ep.assign(switch=ep["t_start"] == prev["t_start"] + prev["duration"])
     g = ep.groupby(key)
     out = g.agg(n_episodes=("state", "size"), stated_frames=("duration", "sum"),
-                mean_dwell_frames=("duration", "mean")).reset_index()
-    out["state_transitions"] = out["n_episodes"] - 1
-    out["state_transition_rate"] = np.where(out["stated_frames"] > 1,
-                                            out["state_transitions"] / (out["stated_frames"] - 1),
-                                            np.nan)
+                mean_dwell_frames=("duration", "mean"),
+                state_transitions=("switch", "sum")).reset_index()
+    pairs = out["stated_frames"] - out["n_episodes"] + out["state_transitions"]
+    out["state_transition_rate"] = out["state_transitions"] / pairs.where(pairs > 0)
     occ = (ep.groupby(key + ["state"])["duration"].sum().unstack("state", fill_value=0)
            .reindex(columns=list(STATES), fill_value=0))
     occ = occ.div(occ.sum(axis=1), axis=0)

@@ -30,9 +30,11 @@ def main():
         fig, res = plotting.dot_panel(
             panel.arms, values, panels.YLABEL[panel.measure], panel.title, key=panel.name,
             ceiling=panels.MOTILITY_CEILING if is_motility else None,
-            bounded01=panel.measure.endswith("_occupancy"),
+            bounded01=(panel.measure.endswith("_occupancy")
+                       or panel.measure == "arrest_coefficient"),
             connect_medians=panel.arms == panels.DOSES)
-        fig.savefig(layout.panels / f"{panel.name}.pdf")
+        # tight box: two-line axis labels would otherwise be clipped at the left edge
+        fig.savefig(layout.panels / f"{panel.name}.pdf", bbox_inches="tight", pad_inches=0.03)
         plt.close(fig)
         for pr in res["pairs"]:
             a, b = values[pr["i"]], values[pr["j"]]

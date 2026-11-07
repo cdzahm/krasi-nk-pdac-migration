@@ -24,7 +24,7 @@ KRASI = ["IL-15", "KRASi"]
 TRIKE = ["IL-15", "TriKE"]
 COMBINED = ["IL-15", "TriKE", "TriKE+KRASi"]
 NO_IL15 = ["no IL-15", "IL-15"]
-DOSES = ["0 ng", "1 ng", "10 ng"]
+DOSES = ["0 ng/mL", "1 ng/mL", "10 ng/mL"]
 
 
 @dataclass(frozen=True)

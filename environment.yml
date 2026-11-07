@@ -12,7 +12,5 @@ dependencies:
       - tifffile==2026.3.3
       - matplotlib==3.11.1
       - laptrack==0.17.1
-      - cellpose==4.2.1.1
-      - torch==2.5.1
       - pytest
       - -e .

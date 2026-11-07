@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from nkmigration import prwm
 
@@ -35,3 +36,16 @@ def test_persistence_capped_at_duration():
 def test_short_tracks_not_fit():
     assert prwm.fit_axis(np.arange(6, dtype=float), 1.0) is None
     assert prwm.fit_axis(np.arange(7, dtype=float), 1.0) is not None
+
+
+def test_tracks_with_missing_z_are_not_fit():
+    rng = np.random.default_rng(2)
+    rows = []
+    for tid in (1, 2):
+        pos = np.cumsum(rng.normal(0, 2, (12, 3)), axis=0)
+        for t, (x, y, z) in enumerate(pos):
+            rows.append({"track_id": tid, "t": t, "x_um": x, "y_um": y, "z_um": z})
+    tracks = pd.DataFrame(rows)
+    tracks.loc[(tracks.track_id == 2) & (tracks.t == 5), "z_um"] = np.nan
+    fits = prwm.fit_tracks(tracks, frame_min=1.0)
+    assert fits["track_id"].tolist() == [1]
